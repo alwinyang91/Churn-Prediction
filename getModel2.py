@@ -1,6 +1,9 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score
 import category_encoders as ce
@@ -14,15 +17,25 @@ if __name__ == '__main__':
     # getting validation data
     val_original = pd.read_csv("./data/validation_data.csv")
 
+    drop_list = ["customerID"]  # 1
+    traget_list = ["Churn"]  # 1    
+    labelEncoder_list = ['gender', "Partner", "Dependents", "PaperlessBilling", "PaymentMethod", "PhoneService", "InternetService", "Contract", 
+                        "MultipleLines", "OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies"]  # 15
+    standardScaler_list = ["SeniorCitizen", "tenure", "MonthlyCharges", "TotalCharges"]  # 4
+    # (len(drop_list) + len(traget_list) + len(labelEncoder_list) + len(standardScaler_list)) == len(train_original.columns)
+
     PreProcessingTrainX_Transformer = FunctionTransformer(func = PreProcessor.TrainX, check_inverse = False)
     PreProcessingTrainy_Transformer = FunctionTransformer(func = PreProcessor.Trainy, check_inverse = False)
-    
-    labelEncoder_list = ['gender', "Partner", "Dependents", "PaperlessBilling", "PaymentMethod", "PhoneService", "InternetService", "Contract", 
-                     "MultipleLines", "OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies"]
+    PreProcessCloumnTrainX_Transformer = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), standardScaler_list),
+            ('cat', OneHotEncoder(), labelEncoder_list)
+        ])
+
     ordinalEncoder_X = ce.OrdinalEncoder(cols=labelEncoder_list)
     ordinalEncoder_y = ce.OrdinalEncoder(cols = ['Churn'], mapping=[{'col':'Churn','mapping':{'No':0, 'Yes':1}}])
 
-    pipe_TrainX = Pipeline(steps=[('preprocessing',PreProcessingTrainX_Transformer),('encoder_X',ordinalEncoder_X)])
+    pipe_TrainX = Pipeline(steps=[('preprocessing',PreProcessingTrainX_Transformer),('preprocessor', PreProcessCloumnTrainX_Transformer)])
     train_X = pipe_TrainX.fit_transform(train_original)
     val_X = pipe_TrainX.fit_transform(val_original)
 
